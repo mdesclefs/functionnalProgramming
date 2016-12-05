@@ -12,6 +12,9 @@ data Position = Position { x :: Int
                          , y :: Int
                          }
 
+newPosition :: Int -> Int -> Position
+newPosition x' y' = Position { x = x', y = y'}
+
 instance Show (Position) where
     show position =  "(" ++ show (x position) ++ "," ++ show (y position) ++ ")"
 

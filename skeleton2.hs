@@ -21,9 +21,5 @@ class (Read board, Show position) => Maze board position where
 instance Maze Board Position where
     entrance board = entrance board
     exits board = exits board
-    shortest board = (Position 3 2):[]
-    neighbourghs board position = let north = position {y=(y position)-1}
-                                      south = position {y=(y position)+1}
-                                      west = position {x=(x position)-1}
-                                      east = position {x=(x position)+1}
-                                  in  [north, south, west, east]
+    shortest board = [(Position 3 2)]
+    neighbourghs board (Position x y) = [Position x (y-1),  Position x (y+1), Position (x-1) y, Position (x+1) y]
