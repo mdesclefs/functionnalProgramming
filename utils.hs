@@ -1,5 +1,6 @@
 module Utils 
 (
+    Positions,
     Position(..),
     Board(..),
     parseBoard
@@ -8,10 +9,10 @@ module Utils
 import Data.List
 
 -- Position Definition
-
+type Positions = [Position]
 data Position = Position { x :: Int
                          , y :: Int
-                         }
+                         } deriving (Eq)
 
 instance Show Position where
     show position =  "(" ++ show (x position) ++ "," ++ show (y position) ++ ")"
