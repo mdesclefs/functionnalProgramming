@@ -1,25 +1,33 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 import qualified System.Environment
 
-import Utils
+import qualified Utils
 import Data.List
 import Data.Maybe
 
 main :: IO ()
 main = do [path] <- System.Environment.getArgs
           maze <- readFile path
-          putStr $ show $ shortest $ read maze
+          -- putStr $ show $ entrance $ read (maze :: Utils.Board)
+          putStr $ show $ entrance $ (read maze::Utils.Board)
 
 
 class (Read board, Show position) => Maze board position where
-  entrance :: board -> position
-  exits :: board -> [position]
-  neighbourghs :: board -> position -> [position]
-  shortest :: board -> Maybe [position]
+    entrance :: board -> position
+    exits :: board -> [position]
+    neighbourghs :: board -> position -> [position]
+    shortest :: board -> Maybe [position]
 
-instance Maze Board Position where
-    entrance board = entrance board
-    exits board = exits board
-    shortest board = [(Position 3 2)]
-    neighbourghs board (Position x y) = [Position x (y-1),  Position x (y+1), Position (x-1) y, Position (x+1) y]
+instance Maze Utils.Board Utils.Position where
+    entrance board = Utils.Position 3 2 ---(entrance board)
+    exits board = [(Utils.Position 3 2)]
+    neighbourghs board (Utils.Position x y) = [ Utils.Position x (y-1),  
+                                            Utils.Position x (y+1), 
+                                            Utils.Position (x-1) y, 
+                                            Utils.Position (x+1) y ]
+    shortest board = Just [(Utils.Position 3 2)]
+
+instance Maze Utils.Board String where
+    entrance board = show (Utils.Position 3 2)

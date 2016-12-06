@@ -1,8 +1,9 @@
 module Utils 
 (
-    Position,
-    Board
-) where
+    Position(..),
+    Board(..),
+    parseBoard
+) where 
 
 import Data.List
 
@@ -12,10 +13,7 @@ data Position = Position { x :: Int
                          , y :: Int
                          }
 
-newPosition :: Int -> Int -> Position
-newPosition x' y' = Position { x = x', y = y'}
-
-instance Show (Position) where
+instance Show Position where
     show position =  "(" ++ show (x position) ++ "," ++ show (y position) ++ ")"
 
 -- Board Definition
@@ -27,13 +25,13 @@ data Board = Board  { width :: Int
                     , entrance :: Position --Maybe if findEntrance
                     , exits :: [Position]
                     , walls :: [Position]
-                    }
+                    } deriving (Show)
 
-instance Read (Board) where
+instance Read Board where
     readsPrec _ = parseBoard
 
 parseBoard :: String -> [(Board, String)]
-parseBoard txtBoard = [(Board width height entrance exits walls, "test")]
+parseBoard txtBoard = [(Board width height entrance exits walls, "")]
                     where
                             board = lines txtBoard
                             width = length (board !! 0) + 1
