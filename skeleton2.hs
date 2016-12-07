@@ -11,9 +11,8 @@ import Data.Maybe
 main :: IO ()
 main = do [path] <- System.Environment.getArgs
           maze <- readFile path
-          -- putStr $ show $ entrance $ read (maze :: ListImplementation.Board)
-          putStr $ show $ (shortest $ (read maze::ListImplementation.Board):: ListImplementation.Positions)
-          -- putStr $ show $ (showSolution $ (read maze::ListImplementation.Board) ([]::ListImplementation.Positions))
+          -- putStr $ show $ (shortest $ (read maze::ListImplementation.Board):: ListImplementation.Positions)
+          putStr $ show $ (shortest $ (read maze::TreeImplementation.Board):: TreeImplementation.Positions)
 
 class (Read board, Show position) => Maze board position where
     entrance :: board -> position
@@ -34,7 +33,7 @@ instance Maze ListImplementation.Board ListImplementation.Position where
                                                                                                                             ListImplementation.Position x (y+1), 
                                                                                                                             ListImplementation.Position (x-1) y, 
                                                                                                                             ListImplementation.Position (x+1) y ]
-    shortest board = computePath board initPosition resultPath []
+    shortest board = computePath board initPosition resultPath [fst initPosition]
                      where 
                         initQueue = [(entrance board, entrance board)]
                         initPath = []
@@ -73,11 +72,44 @@ instance Maze ListImplementation.Board ListImplementation.Position where
         return $ ListImplementation.getComposant board (ListImplementation.Position x y)
 
 instance Maze TreeImplementation.Board TreeImplementation.Position where
-    entrance board = (TreeImplementation.findInBoard board "*") !! 0
-    exits board = TreeImplementation.findInBoard board "@"
-    neighbourghs board (Position (x,y)) = filter ( `notElem` walls ) [  TreeImplementation.Position (x, (y-1)),  
-                                                                        TreeImplementation.Position (x, (y+1)), 
-                                                                        TreeImplementation.Position ((x-1), y), 
-                                                                        TreeImplementation.Position ((x+1), y) ]
-                                        where
-                                            walls = TreeImplementation.findInBoard board "X"
+    entrance board = (TreeImplementation.findInBoard board '*') !! 0
+    exits board = TreeImplementation.findInBoard board '@'
+    neighbourghs board (TreeImplementation.Position (x,y)) = filter ( `notElem` walls ) [   TreeImplementation.Position (x, (y-1)),  
+                                                                                            TreeImplementation.Position (x, (y+1)), 
+                                                                                            TreeImplementation.Position ((x-1), y), 
+                                                                                            TreeImplementation.Position ((x+1), y) ]
+                                                            where
+                                                                walls = TreeImplementation.findInBoard board 'X'
+
+    shortest board = computePath board initPosition resultPath [fst initPosition]
+                     where 
+                        initQueue = [(entrance board, entrance board)]
+                        initPath = []
+                        resultPath = (shortest' board initQueue initPath)
+                        initPosition = resultPath !! 0
+
+    shortest' board (x:xs) path 
+        | (actualPosition) `elem` (exits board) = newPath
+        | (1+length xs) == 0 = [] 
+        | otherwise = shortest' board newQueue newPath
+        where
+            actualPosition = snd x
+            neighbourghsTupple = (concatMap (\next -> [(actualPosition,next)]) (neighbourghs board actualPosition))
+            alreadyVisit = map snd path
+            newQueue = xs++filter ((`notElem` alreadyVisit).snd) neighbourghsTupple
+            newPath = x:path
+
+    computePath board position tupplePath path
+        | ((fst position) == (entrance board)) = path
+        | otherwise = computePath board nextPositionTupple newTupplePath newPath
+        where 
+            nextPositionTupple = (filter ((==fst position).snd) tupplePath) !! 0
+            nextPosition = fromJust (elemIndex nextPositionTupple (tupplePath))
+            newTupplePath = drop nextPosition tupplePath
+            newPath = (fst nextPositionTupple):path           
+
+
+    showSolution board path = do
+        (y) <- [1..(TreeImplementation.getHeight board)]
+        (x) <- [1..(TreeImplementation.getWidth board)]
+        return $ fromJust (TreeImplementation.getPoint board (TreeImplementation.Position (x, y)))

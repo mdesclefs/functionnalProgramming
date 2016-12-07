@@ -21,6 +21,12 @@ instance Show Point where
 -- Board Definition
 data Board = Board [[Char]]
 
+getHeight :: Board -> Int
+getHeight (Board board) = (length board)
+
+getWidth :: Board -> Int
+getWidth (Board board) = (length (board !! 0))
+
 instance Read Board where
     readsPrec _ = parseBoard
 
