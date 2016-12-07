@@ -9,8 +9,10 @@ data Position = Position { x :: Int
                          , y :: Int
                          } deriving (Eq)
 
+                         
+
 instance Show Position where
-    show position =  "(" ++ show (x position) ++ "," ++ show (y position) ++ ")"
+    show (Position x y) =  "(" ++ show x ++ "," ++ show y ++ ")"
 
 -- Board Definition
 
@@ -39,7 +41,6 @@ parseBoard txtBoard = [(Board width height entrance exits walls, "")]
                             board = lines txtBoard
                             width = length (board !! 0) + 1
                             height = length (board) + 1
-                            -- entrance = findEntrance board 0
                             entrance = (findChar '*' board 0 []) !! 0
                             exits = findChar '@' board 0 []
                             walls = findChar 'X' board 0 []
