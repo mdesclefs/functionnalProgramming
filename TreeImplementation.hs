@@ -8,7 +8,7 @@ type Positions = [Position]
 data Position = Position (Int, Int) deriving (Eq)
 
 instance Show Position where
-    show position =  "(" ++ fst x ++ "," ++ snd y ++ ")"
+    show (Position (x,y)) =  "(" ++ show x ++ "," ++ show y ++ ")"
 
 data Point = Point  { position :: Position
                     , neighbour :: Positions
@@ -19,7 +19,7 @@ instance Show Point where
     show (Point position _ value) = show position ++ ":" ++ show value
 
 -- Board Definition
-data Board = Board [[Point]]
+data Board = Board [[Char]]
 
 instance Read Board where
     readsPrec _ = parseBoard
@@ -41,12 +41,13 @@ splitLine x y line points
     | (x == (length line)) = reverse points
     | otherwise = splitLine (x+1) y line newPoints
     where
-        newPoints = ((Point (Position x y) [] (line!!x))):points
+        newPoints = (line!!x):points
 
-getPoint :: Position -> Board -> Char
-getPoint (Position x y) (Board board) 
-    | (y >= (length board) || x >= (length (board!!0)) = Nothing
-    | otherwise = ((board!!y)!!x)
+getPoint :: Board -> Position -> Maybe Char
+getPoint (Position (x,y)) (Board board) 
+    | (y >= (length board)) = Nothing
+    | (x >= (length (board !! 0))) = Nothing
+    | otherwise = Just ( (board !! y) !! x)
 
 -- constructTree :: [String] -> Position -> Positions -> Point
 -- constructTree board init = Point 
