@@ -14,6 +14,8 @@ main = do [path] <- System.Environment.getArgs
           -- putStr $ show $ (shortest $ (read maze::ListImplementation.Board):: ListImplementation.Positions)
           putStr $ show $ (shortest $ (read maze::TreeImplementation.Board):: TreeImplementation.Positions)
 
+          putStr $ show $ (showSolution $ (read maze::TreeImplementation.Board) (shortest (read maze::TreeImplementation.Board):: TreeImplementation.Positions))
+
 class (Read board, Show position) => Maze board position where
     entrance :: board -> position
     exits :: board -> [position]
@@ -109,7 +111,5 @@ instance Maze TreeImplementation.Board TreeImplementation.Position where
             newPath = (fst nextPositionTupple):path           
 
 
-    showSolution board path = do
-        (y) <- [1..(TreeImplementation.getHeight board)]
-        (x) <- [1..(TreeImplementation.getWidth board)]
-        return $ fromJust (TreeImplementation.getPoint board (TreeImplementation.Position (x, y)))
+    showSolution board path = show board
+        
