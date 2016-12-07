@@ -44,10 +44,17 @@ splitLine x y line points
         newPoints = (line!!x):points
 
 getPoint :: Board -> Position -> Maybe Char
-getPoint (Position (x,y)) (Board board) 
+getPoint (Board board) (Position (x,y)) 
     | (y >= (length board)) = Nothing
     | (x >= (length (board !! 0))) = Nothing
     | otherwise = Just ( (board !! y) !! x)
+
+findInBoard :: Board -> Char -> Int -> Positions -> Positions
+findInBoard (Board board) pattern y result
+    | (y==(length board)) = result
+    | otherwise = findInBoard (Board board) pattern (y+1) newResult
+    where
+        newResult = concatMap (\x -> [Position (x,y)]) (elemIndices (pattern) (board!!y))
 
 -- constructTree :: [String] -> Position -> Positions -> Point
 -- constructTree board init = Point 
