@@ -3,7 +3,7 @@
 import qualified System.Environment
 
 import qualified ListImplementation
---- import qualified TreeImplementation
+import qualified TreeImplementation
 import Data.List
 import Data.Maybe
 -- MAYBE ON SHORTEST
@@ -30,10 +30,10 @@ class (Read board, Show position) => Maze board position where
 instance Maze ListImplementation.Board ListImplementation.Position where
     entrance (ListImplementation.Board _ _ entrance _ _) = entrance
     exits (ListImplementation.Board _ _ _ exits _) =  exits
-    neighbourghs (ListImplementation.Board _ _ _ _ walls) (ListImplementation.Position x y) = filter ( `notElem` walls ) [   ListImplementation.Position x (y-1),  
-                                                                                                   ListImplementation.Position x (y+1), 
-                                                                                                   ListImplementation.Position (x-1) y, 
-                                                                                                   ListImplementation.Position (x+1) y ]
+    neighbourghs (ListImplementation.Board _ _ _ _ walls) (ListImplementation.Position x y) = filter ( `notElem` walls ) [  ListImplementation.Position x (y-1),  
+                                                                                                                            ListImplementation.Position x (y+1), 
+                                                                                                                            ListImplementation.Position (x-1) y, 
+                                                                                                                            ListImplementation.Position (x+1) y ]
     shortest board = computePath board initPosition resultPath []
                      where 
                         initQueue = [(entrance board, entrance board)]
@@ -71,3 +71,13 @@ instance Maze ListImplementation.Board ListImplementation.Position where
         (y) <- [1..(ListImplementation.height board)]
         (x) <- [1..(ListImplementation.width board)]
         return $ ListImplementation.getComposant board (ListImplementation.Position x y)
+
+instance Maze TreeImplementation.Board TreeImplementation.Position where
+    entrance board = (TreeImplementation.findInBoard board "*") !! 0
+    exits board = TreeImplementation.findInBoard board "@"
+    neighbourghs board (Position (x,y)) = filter ( `notElem` walls ) [  TreeImplementation.Position (x, (y-1)),  
+                                                                        TreeImplementation.Position (x, (y+1)), 
+                                                                        TreeImplementation.Position ((x-1), y), 
+                                                                        TreeImplementation.Position ((x+1), y) ]
+                                        where
+                                            walls = TreeImplementation.findInBoard board "X"

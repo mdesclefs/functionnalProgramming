@@ -49,12 +49,20 @@ getPoint (Board board) (Position (x,y))
     | (x >= (length (board !! 0))) = Nothing
     | otherwise = Just ( (board !! y) !! x)
 
-findInBoard :: Board -> Char -> Int -> Positions -> Positions
-findInBoard (Board board) pattern y result
+getLine :: Board -> Int -> Maybe [Char]
+getLine (Board board) y 
+    | (y >= (length board)) = Nothing
+    | otherwise = Just (board !! y)
+
+findInBoard :: Board -> Char -> Positions
+findInBoard board char = findInBoard' board char 0 []
+
+findInBoard' :: Board -> Char -> Int -> Positions -> Positions
+findInBoard' (Board board) pattern y result
     | (y==(length board)) = result
-    | otherwise = findInBoard (Board board) pattern (y+1) newResult
+    | otherwise = findInBoard' (Board board) pattern (y+1) newResult
     where
-        newResult = concatMap (\x -> [Position (x,y)]) (elemIndices (pattern) (board!!y))
+        newResult = result ++ (map (\x -> (Position (x,y))) (elemIndices (pattern) (board!!y)))
 
 -- constructTree :: [String] -> Position -> Positions -> Point
 -- constructTree board init = Point 
