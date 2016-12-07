@@ -1,6 +1,7 @@
 module Utils 
 (
     Positions,
+    Path,
     Position(..),
     Board(..),
     parseBoard
@@ -9,6 +10,7 @@ module Utils
 import Data.List
 
 -- Position Definition
+type Path = (Position, Position)
 type Positions = [Position]
 data Position = Position { x :: Int
                          , y :: Int
@@ -41,7 +43,6 @@ parseBoard txtBoard = [(Board width height entrance exits walls, "")]
                             entrance = (findChar '*' board 0 []) !! 0
                             exits = findChar '@' board 0 []
                             walls = findChar 'X' board 0 []
-
 
 findEntrance :: Matrix -> Int -> Maybe Position
 findEntrance board y 
