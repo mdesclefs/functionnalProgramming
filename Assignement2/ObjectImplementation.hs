@@ -1,22 +1,18 @@
-module ListImplementation where 
+module ObjectImplementation where 
 
 import Data.List
 import Utils
+
 -- Position Definition
-type Path = (Position, Position)
 type Positions = [Position]
 data Position = Position { x :: Int
                          , y :: Int
                          } deriving (Eq)
 
-                         
-
 instance Show Position where
     show (Position x y) =  "(" ++ show x ++ "," ++ show y ++ ")"
 
 -- Board Definition
-
--- data Board = Board [[Char]] deriving (Read) 
 type Matrix = [[Char]]
 data Board = Board  { width :: Int
                     , height :: Int
@@ -24,13 +20,6 @@ data Board = Board  { width :: Int
                     , exits :: [Position]
                     , walls :: [Position]
                     } deriving (Show)
-
-getComposant :: Board -> Position -> Char
-getComposant board position 
-    | position == (entrance board) = '*'
-    | position `elem` (exits board) = '@'
-    | position `elem` (walls board) = 'X'
-    | otherwise = ' '
 
 instance Read Board where
     readsPrec _ = parseBoard
@@ -44,6 +33,14 @@ parseBoard txtBoard = [(Board width height entrance exits walls, "")]
                             entrance = (findChar '*' board 0 []) !! 0
                             exits = findChar '@' board 0 []
                             walls = findChar 'X' board 0 []
+
+
+getComposant :: Board -> Position -> Char
+getComposant board position 
+    | position == (entrance board) = '*'
+    | position `elem` (exits board) = '@'
+    | position `elem` (walls board) = 'X'
+    | otherwise = ' '
 
 findEntrance :: Matrix -> Int -> Maybe Position
 findEntrance board y 

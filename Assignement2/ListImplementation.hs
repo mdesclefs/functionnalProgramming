@@ -1,4 +1,4 @@
-module TreeImplementation where 
+module ListImplementation where 
 
 import Data.List
 import Utils
@@ -9,14 +9,6 @@ data Position = Position (Int, Int) deriving (Eq)
 
 instance Show Position where
     show (Position (x,y)) =  "(" ++ show x ++ "," ++ show y ++ ")"
-
-data Point = Point  { position :: Position
-                    , neighbour :: Positions
-                    , value :: Char
-                    } deriving (Eq)
-
-instance Show Point where
-    show (Point position _ value) = show position ++ ":" ++ show value
 
 -- Board Definition
 data Board = Board [[Char]]
@@ -69,15 +61,3 @@ findInBoard' (Board board) pattern y result
     | otherwise = findInBoard' (Board board) pattern (y+1) newResult
     where
         newResult = result ++ (map (\x -> (Position (x,y))) (elemIndices (pattern) (board!!y)))
-
--- constructTree :: [String] -> Position -> Positions -> Point
--- constructTree board init = Point 
-
--- constructPoint :: [String] -> Position -> Position -> Positions -> Point
--- constructPoint board prec position walls = Point position prec 
---                                     where 
---                                         neighbour = filter ( `notElem` walls ) [  Position x (y-1),  
---                                                                                   Position x (y+1), 
---                                                                                   Position (x-1) y, 
---                                                                                   Position (x+1) y ]
---                                         availableNeighbour = filter (/= prec) Position
