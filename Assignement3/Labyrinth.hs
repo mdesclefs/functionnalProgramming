@@ -1,0 +1,288 @@
+module Labyrinth where 
+
+import System.Random
+import Data.List
+import qualified Parser
+import qualified Grammar
+import qualified Utils
+
+
+-- Position Definition
+data Position = Position { x :: Int
+                         , y :: Int
+                         } deriving (Eq)
+
+instance Show Position where
+    show (Position x y) =  "(" ++ show x ++ "," ++ show y ++ ")"
+
+
+-- Labyrinth Definition
+data Labyrinth = Labyrinth  { tiles :: [[Tile]]
+                            , extraTile :: Tile
+                            }
+
+instance Show Labyrinth where
+    show (Labyrinth tiles extra) = printLabyrinth tiles extra
+
+printLabyrinth :: [[Tile]] -> Tile -> String
+printLabyrinth arr extra = display
+    where   labyrinthPrinted = printLabyrinth' arr 0 (line++header)
+            header = "--- 1 ---- 2 ---- 3 ---- 4 ---- 5 ---- 6 ---- 7 ---------\n"
+            line =   "---------------------------------------------------------\n"
+            display = labyrinthPrinted ++ (header++line) ++ "Extra tile : " ++ show extra ++ "\n"
+
+printLabyrinth' :: [[Tile]] -> Int -> String -> String
+printLabyrinth' labyrinthRaw y labyrinth
+    | (y == size) = labyrinth
+    | otherwise = printLabyrinth' labyrinthRaw (y+1) newLabyrinth
+    where   line = (printLine (labyrinthRaw !! y) 0 beginHeader) ++ endHeader
+            -- header = if odd y then (show (div (y+1) 2)++"  ") else ".  "
+            header = show (y+1)
+            beginHeader = header ++ " | "
+            endHeader = " | " ++ header ++ "\n"
+            newLabyrinth = labyrinth ++ line
+            size = length labyrinthRaw
+
+printLine :: [Tile] -> Int -> String -> String
+printLine lineRaw x line
+    | (x == size) = line
+    | otherwise = printLine lineRaw (x+1) newLine
+    where   newLine = line ++ (show (lineRaw !! x))
+            size = length lineRaw
+
+-- Initilization labyrinth
+
+fixedLabyrinth :: [[Tile]]
+fixedLabyrinth = 
+            [
+                [ 
+                    Tile Grammar.East Grammar.Corner 0,
+                    Tile Grammar.South Grammar.Tshape 0,
+                    Tile Grammar.South Grammar.Tshape 0,
+                    Tile Grammar.South Grammar.Corner 0
+                ],
+                [],
+                [   
+                    Tile Grammar.East Grammar.Tshape 0,
+                    Tile Grammar.East Grammar.Tshape 0,
+                    Tile Grammar.South Grammar.Tshape 0,
+                    Tile Grammar.West Grammar.Tshape 0
+                ],
+                [],
+                [   
+                    Tile Grammar.East Grammar.Tshape 0,
+                    Tile Grammar.North Grammar.Tshape 0,
+                    Tile Grammar.West Grammar.Tshape 0,
+                    Tile Grammar.West Grammar.Tshape 0
+                ],
+                [],
+                [
+                    Tile Grammar.North Grammar.Corner 0,
+                    Tile Grammar.North Grammar.Tshape 0,
+                    Tile Grammar.North Grammar.Tshape 0,
+                    Tile Grammar.West Grammar.Corner 0
+                ]
+            ]
+
+initLabyrinth :: [Float] -> Labyrinth
+initLabyrinth randomList = Labyrinth { 
+                              tiles = labyrinthWithTreasures 
+                            , extraTile = remainingTile
+                            }
+    where   (labyrinth, remainingTile) = initLabyrinth' 0 (generateTilesList randomList) fixedLabyrinth
+            labyrinthWithTreasures = assignTreasures labyrinth treasures
+            treasures = generateTreasure randomList
+
+
+initLabyrinth' :: Int -> [Tile] -> [[Tile]] -> ([[Tile]], Tile)
+initLabyrinth' y tilesList labyrinth
+    | (y == 7) = (labyrinth, (tilesList!!0))
+    | otherwise = initLabyrinth' (y+1) restTiles newLabyrinth
+    where   newLabyrinth = Utils.edit y newLine labyrinth
+            newLine = initLine y 1 tiles (labyrinth!!y)
+            (tiles, restTiles) = splitAt tilesNbr tilesList
+            tilesNbr = (if even y then 3 else 7)
+
+initLine :: Int -> Int -> [Tile] -> [Tile] -> [Tile]
+initLine y x [] line = line
+initLine y x (newTile:restTiles) line
+    | (x == 8) = line
+    | (even y) = initLine y (x+2) restTiles newLine
+    | otherwise = initLine y (x+1) restTiles newLine
+    where   newLine = (Utils.insert newTile x line)
+
+-- Labyrinth Action
+
+putExtraTile :: Position -> Labyrinth -> [Player] -> (Labyrinth, [Player], Bool)
+putExtraTile position labyrinth players
+    | (elem position verticalAvailable) = (slideColumn position labyrinth, slidePlayers 1 players position, True)
+    | (elem position horizontalAvailable) = (slideRow position labyrinth, slidePlayers 0 players position, True)
+    | otherwise = (labyrinth, players, False)
+    where   verticalAvailable = [(Position x y) | x <- [2,4,6], y <- [1,7]]
+            horizontalAvailable = [(Position y x) | x <- [2,4,6], y <- [1,7]]
+
+slideRow :: Position -> Labyrinth -> Labyrinth
+slideRow (Position x y) (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile'}
+    where   line = tiles !! (y-1)
+            (firstTile:rest) = line
+            newLine =   if x == 1 then 
+                            Utils.delete (length line) (extraTile:line)
+                        else
+                            rest ++ [extraTile]
+            extraTile' = if x == 1 then
+                            last rest
+                         else
+                            firstTile
+            tiles' = Utils.edit (y-1) newLine tiles
+
+
+slideColumn :: Position -> Labyrinth -> Labyrinth
+slideColumn (Position x y) (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile'}
+    where   (tiles', extraTile') = slideColumn' direction tiles extraTile (x-1) (y-1) 
+            direction = if y == 1 then -- down
+                            0
+                        else
+                            1
+
+slideColumn' :: Int -> [[Tile]] -> Tile -> Int -> Int -> ([[Tile]], Tile)
+slideColumn' 1 labyrinth tile _ (-1) = (labyrinth, tile)
+slideColumn' 0 labyrinth tile _ 7 = (labyrinth, tile)
+slideColumn' direction labyrinth tile x y = slideColumn' direction newLabyrinth tile' x nextY
+    where   nextY =   if direction == 0 then -- down
+                            y+1
+                        else
+                            y-1
+            line = labyrinth !! y
+            (tile', line') = Utils.editAndSave x tile line
+            newLabyrinth = Utils.edit y line' labyrinth
+
+
+-- Treasures Part
+
+generateTreasure :: [Float] -> [Position]
+generateTreasure random = generateTreasure' random allPositions []
+    where allPositions = [(Position x y) | x <- [0..6], y <- [0..6], (x,y) /= (0, 0), (x,y) /= (6, 6), (x,y) /= (0, 6), (x,y) /= (6, 0)]
+
+generateTreasure' :: [Float] -> [Position] -> [Position] -> [Position]
+generateTreasure' (randomNotRanged:restRandom) allPositions listTreasure
+    | (length listTreasure == 24) = listTreasure
+    | otherwise = generateTreasure' restRandom restPosition newListTreasure
+    where   randomIndex = Utils.getInRange randomNotRanged 0 (length allPositions)-1
+            (position, restPosition) = Utils.getAndDelete randomIndex allPositions
+            newListTreasure = position:listTreasure
+
+assignTreasures :: [[Tile]] -> [Position] -> [[Tile]]
+assignTreasures labyrinth [] = labyrinth
+assignTreasures labyrinth ((Position x y):restPosition) = assignTreasures newLabyrinth restPosition
+    where   newLabyrinth = Utils.edit y newLine labyrinth
+            line = labyrinth!!y
+            tile = line!!x
+            newTile = tile { treasure = (24 - length restPosition) }
+            newLine = Utils.edit x newTile line
+
+-- Tile Representation
+
+data Tile = Tile {  direction :: Grammar.Direction
+                 ,  kinds :: Grammar.Kind
+                 ,  treasure :: Int}
+
+instance Show Tile where
+    show (Tile direction kinds treasure)
+        | (kinds == Grammar.Corner) = (showCorner direction) ++ showTreasure
+        | (kinds == Grammar.Tshape) = (showTshaped direction) ++ showTreasure
+        | (kinds == Grammar.Line) = (showLine direction) ++ showTreasure
+        | otherwise = show 'X'
+        where showTreasure = if treasure > 0 then 
+                                (
+                                    if treasure < 10 then " ( " ++ show treasure ++ ") " 
+                                    else " (" ++ show treasure ++ ") " 
+                                )
+                             else "      "
+
+generateTile :: Grammar.Kind -> Int -> Tile
+generateTile kinds random = Tile{   direction = direction
+                                ,   kinds = kinds
+                                ,   treasure = 0
+                                }
+                where direction = directions!!random
+                      directions = [Grammar.North ..]
+
+
+generateTilesList :: [Float] -> [Tile]
+generateTilesList randomList = Utils.mix (generateTilesList' 1 randomList []) randomList
+
+generateTilesList' :: Int -> [Float] -> [Tile] -> [Tile]
+generateTilesList' x (randomNotRanged:restRandom) tileList
+    | (x == 36) = tileList
+    | (x > 24) = generateTilesList' (x+1) restRandom ((generateTile Grammar.Line random):tileList)
+    | (x > 16) = generateTilesList' (x+1) restRandom ((generateTile Grammar.Tshape random):tileList)
+    | (x > 0) = generateTilesList' (x+1) restRandom ((generateTile Grammar.Corner random):tileList)
+    | otherwise = []
+    where random = Utils.getInRange randomNotRanged 0 (length [Grammar.North ..])-1
+
+showCorner :: Grammar.Direction -> String
+showCorner direction 
+    | (direction == Grammar.North) = "╚"
+    | (direction == Grammar.East) = "╔"
+    | (direction == Grammar.South) = "╗"
+    | (direction == Grammar.West) = "╝"
+    | otherwise = "X"
+
+showTshaped :: Grammar.Direction -> String
+showTshaped direction 
+    | (direction == Grammar.North) = "╩"
+    | (direction == Grammar.East) = "╠"
+    | (direction == Grammar.South) = "╦"
+    | (direction == Grammar.West) = "╣"
+    | otherwise = "X"
+
+showLine :: Grammar.Direction -> String
+showLine direction 
+    | (direction == Grammar.North) = "║"
+    | (direction == Grammar.East) = "═"
+    | (direction == Grammar.South) = "║"
+    | (direction == Grammar.West) = "═"
+    | otherwise = "X"
+
+
+data Player = Player { color :: Grammar.Color
+                     , position :: Position
+                     , cards :: [(Int, Bool)]
+                     } deriving (Show)
+
+initPlayers :: [Player]
+initPlayers =   [
+                    Player Grammar.Red (Position 2 2) [],
+                    Player Grammar.Green (Position 0 6) [],
+                    Player Grammar.Blue (Position 6 0) [],
+                    Player Grammar.Yellow (Position 6 6) []
+                ]
+slidePlayers :: Int -> [Player] -> Position -> [Player]
+-- axis 1 vertical
+-- axis 0 horizontal
+slidePlayers axis players (Position x y) = slidePlayers' axis players axisValue []
+    where axisValue =   if even y then -- fst 1 = y ; 0 = x
+                            (x, y)
+                        else
+                            (y, x)
+
+-- Verifier que le pion ne sort pas, si dans slidePlayer ça sort, on autorise pas le changement
+
+slidePlayers' :: Int -> [Player] -> (Int, Int) -> [Player] -> [Player]
+slidePlayers' axis [] axisValue players = players
+slidePlayers' axis (player:restPlayers) axisValue players = slidePlayers' axis restPlayers axisValue newPlayers
+    where   newPlayers = [player'] ++ players
+            playerPosition = position player
+            newX = if (fst axisValue) == 1 then (x playerPosition)+1 else (x playerPosition)-1
+            newY = if (fst axisValue) == 1 then (y playerPosition)+1 else (y playerPosition)-1
+            newPosition = 
+                if axis == 1 then 
+                    playerPosition { y = newY }
+                else 
+                    playerPosition { x = newX }
+
+            player' = if needToSwap axis (snd axisValue) player then player { position = newPosition } else player
+
+
+needToSwap :: Int -> Int -> Player -> Bool
+needToSwap axis axisValue (Player _ (Position x y) _) = if axis == 0 then axisValue == y else axisValue == x
