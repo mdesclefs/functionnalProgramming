@@ -91,7 +91,7 @@ initLabyrinth randomList = Labyrinth {
                             , extraTile = remainingTile
                             }
     where   (labyrinth, remainingTile) = initLabyrinth' 0 (generateTilesList randomList) fixedLabyrinth
-            labyrinthWithTreasures = assignTreasures labyrinth treasures
+            labyrinthWithTreasures = distributeTreasures labyrinth treasures
             treasures = generateTreasure randomList
 
 
@@ -174,9 +174,9 @@ generateTreasure' (randomNotRanged:restRandom) allPositions listTreasure
             (position, restPosition) = Utils.getAndDelete randomIndex allPositions
             newListTreasure = position:listTreasure
 
-assignTreasures :: [[Tile]] -> [Position] -> [[Tile]]
-assignTreasures labyrinth [] = labyrinth
-assignTreasures labyrinth ((Position x y):restPosition) = assignTreasures newLabyrinth restPosition
+distributeTreasures :: [[Tile]] -> [Position] -> [[Tile]]
+distributeTreasures labyrinth [] = labyrinth
+distributeTreasures labyrinth ((Position x y):restPosition) = distributeTreasures newLabyrinth restPosition
     where   newLabyrinth = Utils.edit y newLine labyrinth
             line = labyrinth!!y
             tile = line!!x
@@ -251,15 +251,44 @@ showLine direction
 data Player = Player { color :: Grammar.Color
                      , position :: Position
                      , cards :: [(Int, Bool)]
-                     } deriving (Show)
+                     }
 
-initPlayers :: [Player]
-initPlayers =   [
+showCards :: [(Int, Bool)] -> String
+showCards cards = showCards' cards ""
+
+showCards' :: [(Int,Bool)] -> String -> String
+showCards' [] line = line
+showCards' ((treasure, state):restCards) line = showCards' restCards newLine
+    where   newLine = line ++ (if treasure < 10 then " " else "") ++ show treasure ++ " : " ++ (if state then "v" else "x") ++ "\n"
+
+instance Show Player where
+    show (Player color position cards) = "Color : " ++ show color ++ "\nPosition : " ++ show position ++ "\n" ++ (showCards cards)
+
+fixedPlayers :: [Player]
+fixedPlayers =  [
                     Player Grammar.Red (Position 0 0) [],
                     Player Grammar.Green (Position 0 6) [],
                     Player Grammar.Blue (Position 6 0) [],
                     Player Grammar.Yellow (Position 6 6) []
                 ]
+
+initPlayers :: [Float] -> [Player]
+initPlayers randomList = initPlayers' randomList [1..24] fixedPlayers []
+
+initPlayers' :: [Float] -> [Int] -> [Player] -> [Player] -> [Player]
+initPlayers' _ [] [] players = players 
+initPlayers' randomList treasures (player:restPlayer) players = initPlayers' randomList restTreasures restPlayer newPlayers
+    where   treasuresPerPlayer = 6
+            (newPlayer, restTreasures) = assignTreasures randomList treasuresPerPlayer treasures player
+            newPlayers = players ++ [newPlayer]
+
+assignTreasures :: [Float] -> Int -> [Int] -> Player -> (Player, [Int])
+assignTreasures _ 0 treasures player = (player, treasures)
+assignTreasures (randomNotRanged:restRandom) treasuresLeft treasures player = assignTreasures restRandom (treasuresLeft-1) restTreasures newPlayer
+    where   randomIndex = Utils.getInRange randomNotRanged 0 (length treasures)-1
+            (treasure, restTreasures) = Utils.getAndDelete randomIndex treasures
+            newPlayer = player { cards = (treasure,False):(cards player) }
+
 slidePlayers :: Int -> [Player] -> Position -> Maybe [Player]
 -- axis 1 vertical
 -- axis 0 horizontal

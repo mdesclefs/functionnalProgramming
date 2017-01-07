@@ -12,7 +12,7 @@ main = do
     g <- getStdGen
     let randomList = (randomRs (0, 1) g) :: [Float]
     let labyrinth = Labyrinth.initLabyrinth randomList
-    let players = Labyrinth.initPlayers
+    let players = Labyrinth.initPlayers randomList
     putStrLn $ show (labyrinth)
     putStrLn $ show (players) ++ "\n"
     let (labyrinth2, players2, bool) = (Labyrinth.putExtraTile (Labyrinth.Position 7 2) labyrinth players)
