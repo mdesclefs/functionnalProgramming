@@ -2,6 +2,7 @@ module Labyrinth where
 
 import System.Random
 import Data.List
+import Data.Maybe
 import qualified Parser
 import qualified Grammar
 import qualified Utils
@@ -115,11 +116,13 @@ initLine y x (newTile:restTiles) line
 
 putExtraTile :: Position -> Labyrinth -> [Player] -> (Labyrinth, [Player], Bool)
 putExtraTile position labyrinth players
-    | (elem position verticalAvailable) = (slideColumn position labyrinth, slidePlayers 1 players position, True)
-    | (elem position horizontalAvailable) = (slideRow position labyrinth, slidePlayers 0 players position, True)
+    | (elem position verticalAvailable && isJust verticalSlide) = (slideColumn position labyrinth, (fromMaybe players verticalSlide), True)
+    | (elem position horizontalAvailable && isJust horizontalSlide) = (slideRow position labyrinth, (fromMaybe players horizontalSlide), True)
     | otherwise = (labyrinth, players, False)
     where   verticalAvailable = [(Position x y) | x <- [2,4,6], y <- [1,7]]
             horizontalAvailable = [(Position y x) | x <- [2,4,6], y <- [1,7]]
+            verticalSlide = slidePlayers 1 players position
+            horizontalSlide = slidePlayers 0 players position
 
 slideRow :: Position -> Labyrinth -> Labyrinth
 slideRow (Position x y) (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile'}
@@ -252,12 +255,12 @@ data Player = Player { color :: Grammar.Color
 
 initPlayers :: [Player]
 initPlayers =   [
-                    Player Grammar.Red (Position 2 2) [],
+                    Player Grammar.Red (Position 0 0) [],
                     Player Grammar.Green (Position 0 6) [],
                     Player Grammar.Blue (Position 6 0) [],
                     Player Grammar.Yellow (Position 6 6) []
                 ]
-slidePlayers :: Int -> [Player] -> Position -> [Player]
+slidePlayers :: Int -> [Player] -> Position -> Maybe [Player]
 -- axis 1 vertical
 -- axis 0 horizontal
 slidePlayers axis players (Position x y) = slidePlayers' axis players axisValue []
@@ -266,11 +269,11 @@ slidePlayers axis players (Position x y) = slidePlayers' axis players axisValue 
                         else
                             (y, x)
 
--- Verifier que le pion ne sort pas, si dans slidePlayer ça sort, on autorise pas le changement
-
-slidePlayers' :: Int -> [Player] -> (Int, Int) -> [Player] -> [Player]
-slidePlayers' axis [] axisValue players = players
-slidePlayers' axis (player:restPlayers) axisValue players = slidePlayers' axis restPlayers axisValue newPlayers
+slidePlayers' :: Int -> [Player] -> (Int, Int) -> [Player] -> Maybe [Player]
+slidePlayers' axis [] axisValue players = Just players
+slidePlayers' axis (player:restPlayers) axisValue players 
+    | (needToSwap' && outOfGame axis newX newY) = Nothing
+    | otherwise = slidePlayers' axis restPlayers axisValue newPlayers
     where   newPlayers = [player'] ++ players
             playerPosition = position player
             newX = if (fst axisValue) == 1 then (x playerPosition)+1 else (x playerPosition)-1
@@ -280,9 +283,16 @@ slidePlayers' axis (player:restPlayers) axisValue players = slidePlayers' axis r
                     playerPosition { y = newY }
                 else 
                     playerPosition { x = newX }
+            needToSwap' = needToSwap axis (snd axisValue) player
+            player' = if needToSwap' then player { position = newPosition } else player
 
-            player' = if needToSwap axis (snd axisValue) player then player { position = newPosition } else player
-
+outOfGame :: Int -> Int -> Int -> Bool
+outOfGame axis newX newY
+    | (axis == 1 && newY < 0) = True
+    | (axis == 1 && newY > 6) = True
+    | (axis == 0 && newX < 0) = True
+    | (axis == 0 && newX > 6) = True
+    | otherwise = False  
 
 needToSwap :: Int -> Int -> Player -> Bool
 needToSwap axis axisValue (Player _ (Position x y) _) = if axis == 0 then axisValue == y else axisValue == x
