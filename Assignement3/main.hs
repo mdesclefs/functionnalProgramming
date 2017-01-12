@@ -15,7 +15,13 @@ main :: IO ()
 main = do
     g <- getStdGen
     let randomList = (randomRs (0, 1) g) :: [Float]
-    runGame (Game.initGame randomList)
+    let game = Game.initGame randomList
+    putStrLn $ show (game)
+    let labyrinth = Game.labyrinth game
+    let players = Game.players game
+    let current_player = Game.current_player game
+    putStrLn $ show (Labyrinth.reachablePositions (players !! current_player) labyrinth)
+    -- runGame (Game.initGame randomList)
     putStrLn $ "Bye !"
 
     -- let labyrinth = Labyrinth.initLabyrinth randomList
@@ -51,7 +57,8 @@ playTurn game = do
     gameAfterPuttingTile <- putExtraTile game
     putStrLn $ show (gameAfterPuttingTile)
     putStrLn $ "Woooow u got those treasures : []"
-    -- gameAfterMovingPawn <- movePawn gameAfterPuttingTile
+    gameAfterMovingPawn <- movePawn gameAfterPuttingTile
+    putStrLn $ show (gameAfterMovingPawn)
     -- Labyrinth.putExtraTile position direction game
     return ("Nice")
 
@@ -67,16 +74,16 @@ putExtraTile game = do
             putStrLn $ "Error: Either the position is invalid, either a player's pawn will be out of the board."
             putExtraTile game
 
--- movePawn :: Game.Game -> IO Game.Game
--- movePawn game = do
---     putStrLn $ "Where do you want to go ?"
---     nextPosition <- askPosition
---     let (newGame, result) = Game.movePawn position game
---     if result
---         then return (newGame)
---         else do 
---             putStrLn $ "Error: This position can not be reach by your pawn."
---             putExtraTile game
+movePawn :: Game.Game -> IO Game.Game
+movePawn game = do
+    putStrLn $ "Where do you want to go ?"
+    nextPosition <- askPosition
+    let (newGame, result) = Game.movePawn nextPosition game
+    if result
+        then return (newGame)
+        else do 
+            putStrLn $ "Error: This position can not be reach by your pawn."
+            putExtraTile game
 
     
 askPosition :: IO Position.Position

@@ -54,9 +54,9 @@ slidePlayers :: Int -> [Player] -> Position -> Maybe [Player]
 -- axis 0 horizontal
 slidePlayers axis players (Position x y) = slidePlayers' axis players axisValue []
     where axisValue =   if even y then -- fst 1 = y ; 0 = x
-                            (x, y)
+                            (x-1, y-1)
                         else
-                            (y, x)
+                            (y-1, x-1)
 
 slidePlayers' :: Int -> [Player] -> (Int, Int) -> [Player] -> Maybe [Player]
 slidePlayers' axis [] axisValue players = Just players
@@ -85,3 +85,6 @@ outOfGame axis newX newY
 
 needToSwap :: Int -> Int -> Player -> Bool
 needToSwap axis axisValue (Player _ (Position x y) _ _) = if axis == 0 then axisValue == y else axisValue == x
+
+movePawn :: Player -> Position -> Player
+movePawn player (Position x y) = player { position = (Position (x-1) (y-1)) }

@@ -38,5 +38,8 @@ putExtraTile :: Position.Position -> Tile.Direction -> Game -> (Game, Bool)
 putExtraTile position direction (Game labyrinth players current_player) = ((Game newLabyrinth newPlayers current_player), result)
     where (newLabyrinth, newPlayers, result) = Labyrinth.putExtraTile position direction labyrinth players
 
--- movePawn :: Position.Position -> Game -> (Game, Bool)
--- movePawn position (Game labyrinth players current_player) = Labyrinth.movePawn position labyrinth (players !! current_player)
+movePawn :: Position.Position -> Game -> (Game, Bool)
+movePawn position (Game labyrinth players current_player) = ((Game labyrinth newPlayers current_player), result)
+    where (newPlayer, result) = Labyrinth.movePawn position labyrinth (players !! current_player)
+          newPlayers = Utils.edit current_player newPlayer players
+          cleanedPosition = (Position.Position ((Position.x position)-1) ((Position.y position)-1))
