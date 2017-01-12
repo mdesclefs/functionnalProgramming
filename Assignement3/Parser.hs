@@ -3,13 +3,13 @@ module Parser where
 import qualified Data.Char
 import qualified Control.Monad
 
-newtype Parser a = P (String -> [(a,String)])
+newtype Parser a = P ([String] -> [(a,[String])])
 
-apply :: Parser a -> String -> [(a,String)]
+apply :: Parser a -> [String] -> [(a,[String])]
 apply (P f) s = f s
 
-fromRead :: Read a => Parser a
-fromRead = P reads
+-- fromRead :: Read a => Parser a
+-- fromRead = P reads
 
 instance Functor Parser where
   fmap f p = P (\s -> map (\(x,s) -> (f x, s)) $ apply p s)
@@ -26,7 +26,7 @@ instance Monad Parser where
   -- Combine two parsers
   p >>= f = P (\s1 -> concat (map (\(x,s2) -> apply (f x) s2) (apply p s1)))
 
-parser :: Parser a -> String -> a
+parser :: Parser a -> [String] -> a
 parser p s = fst (head (apply p s))
 
 ------------------------
@@ -72,36 +72,36 @@ some p = do x <- p
 zero :: Parser a
 zero = P (\s -> [])
 
--- Eat a character
-item :: Parser Char
+-- Eat a string
+item :: Parser String
 item = P f where f [] = []
                  f (c:cs) = [(c,cs)]
 
 -- Eat a character only if it satisfies
-sat :: (Char -> Bool) -> Parser Char
-sat f = item >>= (\c -> if f c then return c else zero)
+sat :: (String -> Bool) -> Parser String
+sat f = item >>= (\s -> if f s then return s else zero)
 
--- Try to eat the given character
-char :: Char -> Parser ()
-char c = sat (==c) >> return ()
+-- -- Try to eat the given character
+-- char :: Char -> Parser ()
+-- char c = sat (==c) >> return ()
 
--- Try to eat the given string
-string :: String -> Parser ()
-string (c:cs) = char c >> string cs
-string [] = return ()
+-- -- Try to eat the given string
+-- string :: String -> Parser ()
+-- string (c:cs) = char c >> string cs
+-- string [] = return ()
 
 -------------
 -- Helpers --
 -------------
 
--- Eat blanks characters
-blank :: Parser ()
-blank = many (sat (\c -> c `elem` [' ', '\t', '\n'])) >> return ()
+-- -- Eat blanks characters
+-- blank :: Parser ()
+-- blank = many (sat (\c -> c `elem` [' ', '\t', '\n'])) >> return ()
 
--- Eat blank then call string parser
-keyword :: String -> Parser ()
-keyword s = blank >> string s
+-- -- Eat blank then call string parser
+-- keyword :: String -> Parser ()
+-- keyword s = blank >> string s
 
--- Eat blank then parse alphabetical characters
-token :: Parser String
-token = blank >> (some $ sat Data.Char.isAlpha)
+-- -- Eat blank then parse alphabetical characters
+-- token :: Parser String
+-- token = blank >> (some $ sat Data.Char.isAlpha)
