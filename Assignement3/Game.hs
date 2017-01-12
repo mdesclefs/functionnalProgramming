@@ -1,5 +1,6 @@
 module Game where
 
+import Data.List
 import qualified Labyrinth
 import qualified Player 
 import qualified Position
@@ -40,6 +41,21 @@ putExtraTile position direction (Game labyrinth players current_player) = ((Game
 
 movePawn :: Position.Position -> Game -> (Game, Bool)
 movePawn position (Game labyrinth players current_player) = ((Game labyrinth newPlayers current_player), result)
-    where (newPlayer, result) = Labyrinth.movePawn position labyrinth (players !! current_player)
+    where (newPlayer, result) = Labyrinth.movePawn cleanedPosition labyrinth (players !! current_player)
           newPlayers = Utils.edit current_player newPlayer players
           cleanedPosition = (Position.Position ((Position.x position)-1) ((Position.y position)-1))
+
+gatherTreasures :: Game -> (Game, [Int])
+gatherTreasures (Game labyrinth players current_player) = ((Game labyrinth newPlayers current_player), treasuresGathered)
+    where player = (players !! current_player) 
+          treasuresReachable = Labyrinth.gatherTreasures player labyrinth
+          treasuresGathered = sort (intersect (Player.cards player) treasuresReachable)
+          newPlayer = Player.gatherTreasures player treasuresReachable
+          newPlayers = Utils.edit current_player newPlayer players
+
+nextPlayer :: Game -> Game
+nextPlayer game = game { current_player = nextPlayerInd }
+    where playersNbr = (length (players game)) - 1
+          nextPlayer = (current_player game) + 1
+          nextPlayerInd = if (nextPlayer > playersNbr) then 0 else nextPlayer
+

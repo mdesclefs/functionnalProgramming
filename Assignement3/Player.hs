@@ -3,6 +3,7 @@ module Player where
 import Data.List
 import Position
 import qualified Utils
+import Tile
 
 data Color = Yellow | Red | Blue | Green deriving (Eq, Enum, Read, Show)
 data Control = Human | AI deriving (Eq, Enum, Read, Show)
@@ -87,4 +88,8 @@ needToSwap :: Int -> Int -> Player -> Bool
 needToSwap axis axisValue (Player _ (Position x y) _ _) = if axis == 0 then axisValue == y else axisValue == x
 
 movePawn :: Player -> Position -> Player
-movePawn player (Position x y) = player { position = (Position (x-1) (y-1)) }
+movePawn player (Position x y) = player { position = (Position (x) (y)) }
+
+gatherTreasures :: Player -> [Int] -> Player
+gatherTreasures player treasures = player { cards = ((cards player) \\ treasures) }
+

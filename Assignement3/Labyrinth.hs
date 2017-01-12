@@ -156,8 +156,9 @@ slideColumn' direction labyrinth tile x y = slideColumn' direction newLabyrinth 
 
 movePawn :: Position -> Labyrinth -> Player -> (Player, Bool)
 movePawn position labyrinth player
+    | ((Player.position player) == position) = (player, False)
     | elem position reachablePositionsList = ((Player.movePawn player position), True)
-    | otherwise = (player, True)
+    | otherwise = (player, False)
     where reachablePositionsList = reachablePositions player labyrinth
 
 reachablePositions :: Player -> Labyrinth -> [Position]
@@ -165,26 +166,23 @@ reachablePositions (Player _ position _ _) labyrinth = reachablePositions' posit
 
 reachablePositions' :: Position -> Position -> Labyrinth -> [Position] -> [Position]
 reachablePositions' oldPosition newPosition labyrinth positionsList
-    | (y < 0) = positionsList
-    | (y > 6) = positionsList
-    | (x < 0) = positionsList
-    | (x > 6) = positionsList
+    | not (y >= 0 && y < 7 && x >= 0 && x < 7) = positionsList
     | not (isReachable oldPosition newPosition labyrinth) = positionsList
     | elem newPosition positionsList = positionsList -- Already visited
     | otherwise = fromEastReachablePositions
     where (Position x y) = newPosition
-          fromNorthReachablePositions = (reachablePositions' newPosition (Position x (y-1)) labyrinth (positionsList))
+          fromNorthReachablePositions = (reachablePositions' newPosition (Position x (y-1)) labyrinth (newPosition:positionsList))
           fromSouthReachablePositions = (reachablePositions' newPosition (Position x (y+1)) labyrinth (fromNorthReachablePositions))
           fromWestReachablePositions = (reachablePositions' newPosition (Position (x-1) y) labyrinth (fromSouthReachablePositions))
-          fromEastReachablePositions = (reachablePositions' newPosition (Position (x+1) y) labyrinth (newPosition:fromWestReachablePositions))
+          fromEastReachablePositions = (reachablePositions' newPosition (Position (x+1) y) labyrinth (fromWestReachablePositions))
 
 isReachable :: Position -> Position -> Labyrinth -> Bool
 isReachable (Position fromX fromY) (Position toX toY) (Labyrinth tiles _) 
-    | ((fromX == toY) && (fromY == toY)) = True
+    | ((fromX == toX) && (fromY == toY)) = True
     | otherwise = hasConnections tilesList connections
     where fromTile = ((tiles !! fromY) !! fromX)
           toTile = ((tiles !! toY) !! toX)
-          tilesList = toTile:[fromTile]
+          tilesList = fromTile:[toTile]
           connections = connectionsNeeded fromX fromY toX toY
 
 connectionsNeeded :: Int -> Int -> Int -> Int -> [Direction]
@@ -193,6 +191,7 @@ connectionsNeeded fromX fromY toX toY
     | (toX - fromX) == -1 = [West, East]
     | (toY - fromY) == 1 = [South, North]
     | (toY - fromY) == -1 = [North, South]
+
 -- Treasures Part
 
 generateTreasure :: [Float] -> [Position]
@@ -215,3 +214,14 @@ distributeTreasures labyrinth ((Position x y):restPosition) = distributeTreasure
             tile = line!!x
             newTile = tile { treasure = (24 - length restPosition) }
             newLine = Utils.edit x newTile line
+
+gatherTreasures :: Player -> Labyrinth -> [Int]
+gatherTreasures player labyrinth = gatherTreasures' labyrinth positions []
+    where positions = (reachablePositions player labyrinth)
+
+gatherTreasures' :: Labyrinth -> [Position] -> [Int] -> [Int]
+gatherTreasures' labyrinth [] cards = cards
+gatherTreasures' labyrinth ((Position x y):positions) cards = gatherTreasures' labyrinth positions newCards
+    where tile = ((tiles labyrinth) !! y) !! x
+          tileTreasure = treasure tile
+          newCards = if tileTreasure > 0 then (tileTreasure:cards) else cards

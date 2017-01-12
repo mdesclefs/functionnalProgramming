@@ -2,6 +2,7 @@
 import System.Random
 import Control.Monad
 import Data.Char
+import System.Process
 
 import qualified Utils
 import qualified Game
@@ -16,51 +17,48 @@ main = do
     g <- getStdGen
     let randomList = (randomRs (0, 1) g) :: [Float]
     let game = Game.initGame randomList
-    putStrLn $ show (game)
+    -- putStrLn $ show (game)
     let labyrinth = Game.labyrinth game
     let players = Game.players game
     let current_player = Game.current_player game
-    putStrLn $ show (Labyrinth.reachablePositions (players !! current_player) labyrinth)
-    -- runGame (Game.initGame randomList)
+    -- putStrLn $ show (Labyrinth.reachablePositions (players !! current_player) labyrinth)
+    -- putStrLn $ show (Labyrinth.isReachable (Position.Position 0 0) (Position.Position 1 0) labyrinth)
+    -- putStrLn $ show (Labyrinth.isReachable (Position.Position 0 0) (Position.Position 0 1) labyrinth)
+    runGame (Game.initGame randomList)
     putStrLn $ "Bye !"
 
-    -- let labyrinth = Labyrinth.initLabyrinth randomList
-    -- let players = Player.initPlayers randomList
-    -- putStrLn $ show (labyrinth)
-    -- putStrLn $ show (players) ++ "\n"
-
-    -- let (labyrinth2, players2, bool) = (Labyrinth.putExtraTile (Position.Position 7 2) Tile.North labyrinth players)
-    -- putStrLn $ show (labyrinth2)
-    -- putStrLn $ show (players2)
-    -- putStrLn $ "What do you want to do ? (P = play, S = save, Q = quit)"
-    -- action <- getLine
-    -- -- action <- return ('S')
-    -- when (action /= "Q") $ do
-    --     playerNbr <- getNumber validPlayerNbr "How many players will play (1 to 4 ?)" "The number of player must be digit between 1 and 4"
-    --     putStrLn $ show playerNbr ++ " players"
-
-    -- putStrLn $ show createLabyrinth
-
-runGame :: Game.Game -> IO String
+runGame :: Game.Game -> IO Game.Game
 runGame game = do
     putStrLn $ "What do you want to do ? (P = play, S = save and quit)"
     action <- getLine
-    if action == "Q"
-        then do putStrLn $ "Quit"
-        else do game <- playTurn game
-                putStrLn game
-    return("Bye !")
+    if action /= "P"
+        then do return game
+        else do newGame <- playTurn game
+                return newGame
 
-playTurn :: Game.Game -> IO (String)
+
+playTurn :: Game.Game -> IO Game.Game
 playTurn game = do
     putStrLn $ show (game)
+
     gameAfterPuttingTile <- putExtraTile game
     putStrLn $ show (gameAfterPuttingTile)
-    putStrLn $ "Woooow u got those treasures : []"
-    gameAfterMovingPawn <- movePawn gameAfterPuttingTile
+
+    gameAfterGatheringTreasures <- gatherTreasures gameAfterPuttingTile
+
+    gameAfterMovingPawn <- movePawn gameAfterGatheringTreasures
     putStrLn $ show (gameAfterMovingPawn)
-    -- Labyrinth.putExtraTile position direction game
-    return ("Nice")
+
+    gameAfterTurn <- nextPlayer gameAfterMovingPawn
+
+    -- Add winning situation
+    putStrLn $ "Press any key to switch player."
+    continue <- getLine
+
+    System.Process.callCommand "clear"
+
+    endGame <- runGame gameAfterTurn
+    return (endGame)
 
 putExtraTile :: Game.Game -> IO Game.Game
 putExtraTile game = do
@@ -83,7 +81,18 @@ movePawn game = do
         then return (newGame)
         else do 
             putStrLn $ "Error: This position can not be reach by your pawn."
-            putExtraTile game
+            movePawn game
+
+gatherTreasures :: Game.Game -> IO Game.Game
+gatherTreasures game = do
+    let (newGame, treasures) = Game.gatherTreasures game
+    putStrLn $ "Wow you manage to gather thoses treasures : " ++ show treasures
+    return (newGame)
+
+nextPlayer :: Game.Game -> IO Game.Game
+nextPlayer game = do
+    let newGame = Game.nextPlayer game
+    return (newGame)
 
     
 askPosition :: IO Position.Position
