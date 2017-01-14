@@ -4,41 +4,81 @@ import Control.Monad
 import Data.Char
 import System.Process
 
+import qualified System.Environment
+
+import qualified Parser
+import qualified Grammar
 import qualified Utils
+
 import qualified Game
 import qualified Labyrinth
-import qualified Grammar
 import qualified Player
 import qualified Position
 import qualified Tile
 
 main :: IO ()
 main = do
+    args <- System.Environment.getArgs
+    
     g <- getStdGen
     let randomList = (randomRs (0, 1) g) :: [Float]
-    let game = Game.initGame randomList
-    -- putStrLn $ show (game)
-    let labyrinth = Game.labyrinth game
-    let players = Game.players game
-    let current_player = Game.current_player game
-    -- putStrLn $ show (Labyrinth.reachablePositions (players !! current_player) labyrinth)
-    -- putStrLn $ show (Labyrinth.isReachable (Position.Position 0 0) (Position.Position 1 0) labyrinth)
-    -- putStrLn $ show (Labyrinth.isReachable (Position.Position 0 0) (Position.Position 0 1) labyrinth)
-    runGame (Game.initGame randomList)
+
+    game <- initGame args randomList
     putStrLn $ "Bye !"
 
-runGame :: Game.Game -> IO Game.Game
-runGame game = do
-    putStrLn $ "What do you want to do ? (P = play, S = save and quit)"
-    action <- getLine
-    if action /= "P"
-        then do return game
-        else do newGame <- playTurn game
-                return newGame
+initGame :: [String] -> [Float] -> IO Game.Game
+initGame args randomList = do
+    if length args == 1
+        then do savedGame <- readFile (args !! 0)
+                let loadedGame = Parser.parser Grammar.labyrinth (words savedGame)
+                runGame loadedGame randomList
+    else
+        do playersNumber <- askPlayer 
+           controls <- askAI playersNumber
+           let newGame = Game.initGame controls randomList
+           runGame newGame randomList
+
+runGame :: Game.Game -> [Float] -> IO Game.Game
+runGame game randomList = do
+    startTurn game randomList
+
+startTurn :: Game.Game -> [Float] -> IO Game.Game
+startTurn game randomList = do
+    let (isFinish, winner) = Game.isFinish game
+    if isFinish
+        then do
+             putStrLn $ "Game Won by " ++ show (winner)
+             return game
+        else
+            if Player.isAI (Game.getCurrentPlayer game)
+                then do
+                    playTurnAI game randomList
+                else
+                    do
+                    putStrLn $ "It is " ++ show (Player.color (Game.getCurrentPlayer game)) ++ "'s turn !"
+                    putStrLn $ "What do you want to do ? (P = play, Any = save and quit)"
+                    action <- getLine         
+                    if action /= "P"
+                        then do 
+                            saveFile game
+                            return game
+                    else do newGame <- playTurn game randomList
+                            return newGame
 
 
-playTurn :: Game.Game -> IO Game.Game
-playTurn game = do
+
+playTurnAI :: Game.Game -> [Float] -> IO Game.Game
+playTurnAI game randomList = do
+    let (gameAfterPuttingTile, randomAfterPuttingTile) = Game.putExtraTileAI randomList game
+    let (gameAfterGatheringTreasures, _) = Game.gatherTreasures gameAfterPuttingTile
+    let (gameAfterMovingPawn, randomAfterMovingPawn) = Game.movePawnAI randomAfterPuttingTile gameAfterGatheringTreasures
+    gameAfterTurn <- nextPlayer gameAfterMovingPawn
+    -- putStrLn $ show gameAfterTurn
+    endGame <- startTurn gameAfterTurn randomAfterMovingPawn
+    return (endGame)
+
+playTurn :: Game.Game -> [Float] -> IO Game.Game
+playTurn game randomList = do
     putStrLn $ show (game)
 
     gameAfterPuttingTile <- putExtraTile game
@@ -56,8 +96,7 @@ playTurn game = do
     continue <- getLine
 
     System.Process.callCommand "clear"
-
-    endGame <- runGame gameAfterTurn
+    endGame <- startTurn gameAfterTurn randomList
     return (endGame)
 
 putExtraTile :: Game.Game -> IO Game.Game
@@ -101,6 +140,12 @@ askPosition = do
     y <- getNumber validPosition "Y: " "Y must be digit between 1 and 7"
     return (Position.Position x y)
 
+validPosition :: Int -> Bool
+validPosition number
+    | number < 1 = False
+    | number > 7 = False
+    | otherwise = True
+
 askDirection :: IO Tile.Direction
 askDirection = do
     putStrLn $ "In which direction (N=North, S=South, E=East, W=West) ?"
@@ -130,14 +175,38 @@ getNumber validator question fail = do
             putStrLn $ fail
             getNumber validator question fail
             
-validPosition :: Int -> Bool
-validPosition number
-    | number < 1 = False
-    | number > 7 = False
-    | otherwise = True
+askPlayer :: IO Int
+askPlayer = do
+    getNumber validPosition "How many players will take part of the game ? (1 to 4) " "Number of players must be digit between 1 and 4"
 
-validPlayerNbr :: Int -> Bool
+validPlayerNbr :: Int -> Bool 
 validPlayerNbr number
     | number < 1 = False
     | number > 4 = False
     | otherwise = True
+
+askAI :: Int -> IO [Player.Control]
+askAI nbrPlayers = askAI' 0 nbrPlayers []
+
+askAI' :: Int -> Int -> [Player.Control] -> IO [Player.Control]
+askAI' id nbrPlayer controls = do
+    if id == nbrPlayer then return controls
+    else do
+        let color = [Player.Red ..]
+        putStrLn $ "Will be " ++ show (color !! id) ++ " (A)I or (H)uman ? "
+        control <- getLine
+        if control /= "A" && control /= "H" then
+            do
+            putStrLn $ "This kind of player doesn't exist."
+            askAI' id nbrPlayer controls
+        else
+            do
+            let controlType = if control == "A" then Player.AI else Player.Human
+            askAI' (id+1) nbrPlayer (controls ++ [controlType])
+
+saveFile :: Game.Game -> IO ()
+saveFile game = do
+    putStrLn $ "Where do you want to save the game ? "
+    filename <- getLine
+    writeFile filename (Game.save game)
+

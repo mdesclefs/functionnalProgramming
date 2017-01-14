@@ -1,5 +1,7 @@
 module Utils where
 
+import Data.Char
+
 getInRange :: Float -> Int -> Int -> Int
 getInRange random x y = fromIntegral (ceiling (numberRanged))
     where numberRanged = ((realToFrac(y-x)) * random) + realToFrac(x)
@@ -29,3 +31,6 @@ mix' list newList (randomNotRanged:restRandom) = mix' restList newList' restRand
     where   randomIndex = Utils.getInRange randomNotRanged 0 (length list)-1
             newList' = item:newList
             (item, restList) = Utils.getAndDelete randomIndex list
+
+toLowerList :: [String] -> [String]
+toLowerList list = map (map toLower) list

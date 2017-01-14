@@ -14,6 +14,9 @@ data Labyrinth = Labyrinth  { tiles :: [[Tile]]
                             , extraTile :: Tile
                             }
 
+save :: Labyrinth -> String
+save (Labyrinth tiles extraTile) = (Tile.saveExtraTile extraTile) ++ " " ++ (Tile.saveTiles tiles)
+
 instance Show Labyrinth where
     show (Labyrinth tiles extra) = printLabyrinth tiles extra
 
@@ -22,7 +25,7 @@ printLabyrinth arr extra = display
     where   labyrinthPrinted = printLabyrinth' arr 0 (line++header)
             header = "----- 1 ---- 2 ---- 3 ---- 4 ---- 5 ---- 6 ---- 7 -----------\n"
             line =   "-------------X-------------X-------------X-------------------\n"
-            display = "\n" ++ labyrinthPrinted ++ (header++line) ++ "Extra tile : " ++ show extra ++ "(" ++ show (direction extra) ++ ")\n\n"
+            display = "\n" ++ labyrinthPrinted ++ (header++line) ++ "Extra tile : " ++ show extra ++ "\n\n"
 
 printLabyrinth' :: [[Tile]] -> Int -> String -> String
 printLabyrinth' labyrinthRaw y labyrinth
@@ -77,10 +80,23 @@ fixedLabyrinth =
                 ]
             ]
 
+loadLabyrinth :: [Tile] -> Tile -> Labyrinth
+loadLabyrinth tiles xtile = Labyrinth (convertTiles tiles) xtile
+
+convertTiles :: [Tile] -> [[Tile]]
+convertTiles tiles = convertTiles' tiles []
+
+convertTiles' :: [Tile] -> [[Tile]] -> [[Tile]]
+convertTiles' [] matrix = matrix
+convertTiles' tiles matrix = convertTiles' newTiles newMatrix
+    where line = take 7 tiles
+          newTiles = drop 7 tiles
+          newMatrix = matrix ++ [line]
+
 initLabyrinth :: [Float] -> Labyrinth
 initLabyrinth randomList = Labyrinth { 
                               tiles = labyrinthWithTreasures 
-                            , extraTile = remainingTile
+                            , extraTile = remainingTile {direction = Tile.None}
                             }
     where   (labyrinth, remainingTile) = initLabyrinth' 0 (generateTilesList randomList) fixedLabyrinth
             labyrinthWithTreasures = distributeTreasures labyrinth treasures
@@ -117,7 +133,7 @@ putExtraTile position direction labyrinth players
             horizontalSlide = slidePlayers 0 players position
 
 slideRow :: Position -> Direction -> Labyrinth -> Labyrinth
-slideRow (Position x y) tileDirection (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile'}
+slideRow (Position x y) tileDirection (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile' {direction = Tile.None}}
     where   line = tiles !! (y-1)
             (firstTile:rest) = line
             extraTileUpdated = extraTile {direction = tileDirection}
@@ -133,7 +149,7 @@ slideRow (Position x y) tileDirection (Labyrinth tiles extraTile) = Labyrinth {t
 
 
 slideColumn :: Position -> Direction -> Labyrinth -> Labyrinth
-slideColumn (Position x y) tileDirection (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile'}
+slideColumn (Position x y) tileDirection (Labyrinth tiles extraTile) = Labyrinth {tiles = tiles', extraTile = extraTile' {direction = Tile.None}}
     where   (tiles', extraTile') = slideColumn' direction tiles (extraTile {direction = tileDirection}) (x-1) (y-1) 
             direction = if y == 1 then -- down
                             0
@@ -156,7 +172,7 @@ slideColumn' direction labyrinth tile x y = slideColumn' direction newLabyrinth 
 
 movePawn :: Position -> Labyrinth -> Player -> (Player, Bool)
 movePawn position labyrinth player
-    | ((Player.position player) == position) = (player, False)
+    -- | ((Player.position player) == position) = (player, False) -- Player can not stand on same position
     | elem position reachablePositionsList = ((Player.movePawn player position), True)
     | otherwise = (player, False)
     where reachablePositionsList = reachablePositions player labyrinth

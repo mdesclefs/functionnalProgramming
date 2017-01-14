@@ -5,7 +5,7 @@ import Position
 import qualified Utils
 import Tile
 
-data Color = Yellow | Red | Blue | Green deriving (Eq, Enum, Read, Show)
+data Color = None | Red | Green | Blue | Yellow  deriving (Eq, Enum, Read, Show)
 data Control = Human | AI deriving (Eq, Enum, Read, Show)
 
 data Player = Player { color :: Color
@@ -13,6 +13,24 @@ data Player = Player { color :: Color
                      , cards :: [Int]
                      , control :: Control
                      }
+
+save :: [Player] -> Int -> String
+save players current_player = save' players 0 current_player ""
+
+save' :: [Player] -> Int -> Int -> String -> String
+save' players done current playersTxt 
+    | done == ((length players)) = playersTxt
+    | otherwise = save' players (done+1) newCurrent newPlayersTxt
+    where newCurrent = if length players == (current+1) then 0 else (current+1)
+          newPlayersTxt = playersTxt ++ " " ++ savePlayer (players !! current)
+
+savePlayer :: Player -> String
+savePlayer (Player color (Position x y) cards control) = (show color) ++ " " ++ (show control) ++ " " ++ (show x) ++ " " ++ (show y) ++ " " ++ (saveCards cards "")
+
+saveCards :: [Int] -> String -> String
+saveCards [] cardsTxt = cardsTxt
+saveCards (card:cards) cardsTxt = saveCards cards newCardsTxt
+    where newCardsTxt = cardsTxt ++ " " ++ (show card)
 
 showCards :: [Int] -> String
 showCards cards = showCards' cards ""
@@ -27,21 +45,31 @@ instance Show Player where
 
 fixedPlayers :: [Player]
 fixedPlayers =  [
-                    Player Red (Position 0 0) [] Human,
-                    Player Green (Position 0 6) [] Human,
-                    Player Blue (Position 6 0) [] Human,
-                    Player Yellow (Position 6 6) [] Human
+                    Player Red (initialPosition' Red) [] Human,
+                    Player Green (initialPosition' Green) [] Human,
+                    Player Blue (initialPosition' Blue) [] Human,
+                    Player Yellow (initialPosition' Yellow) [] Human
                 ]
 
-initPlayers :: [Float] -> [Player]
-initPlayers randomList = initPlayers' randomList [1..24] fixedPlayers []
+initialPosition :: Player -> Position
+initialPosition (Player color _ _ _) = initialPosition' color
 
-initPlayers' :: [Float] -> [Int] -> [Player] -> [Player] -> [Player]
-initPlayers' _ [] [] players = players 
-initPlayers' randomList treasures (player:restPlayer) players = initPlayers' randomList restTreasures restPlayer newPlayers
-    where   treasuresPerPlayer = 6
-            (newPlayer, restTreasures) = assignTreasures randomList treasuresPerPlayer treasures player
-            newPlayers = players ++ [newPlayer { cards = (sort (cards newPlayer))}]
+initialPosition' :: Color -> Position
+initialPosition' color
+    | color == Red = (Position 0 0)
+    | color == Green = (Position 0 6)
+    | color == Blue = (Position 6 0)
+    | color == Yellow = (Position 6 6)
+    | otherwise = (Position (-1) (-1))
+
+initPlayers :: [Control] -> [Float] -> [Player]
+initPlayers controls randomList = initPlayers' controls (div 24 (length controls)) randomList [1..24] fixedPlayers []
+
+initPlayers' :: [Control] -> Int -> [Float] -> [Int] -> [Player] -> [Player] -> [Player]
+initPlayers' [] _ _ _ _ players = players 
+initPlayers' (control:restControls) treasuresPerPlayer randomList treasures (player:restPlayer) players = initPlayers' restControls treasuresPerPlayer randomList restTreasures restPlayer newPlayers
+    where   (newPlayer, restTreasures) = assignTreasures randomList treasuresPerPlayer treasures player
+            newPlayers = players ++ [newPlayer { control = control, cards = (sort (cards newPlayer))}]
 
 assignTreasures :: [Float] -> Int -> [Int] -> Player -> (Player, [Int])
 assignTreasures _ 0 treasures player = (player, treasures)
@@ -93,3 +121,35 @@ movePawn player (Position x y) = player { position = (Position (x) (y)) }
 gatherTreasures :: Player -> [Int] -> Player
 gatherTreasures player treasures = player { cards = ((cards player) \\ treasures) }
 
+hasWin :: Player -> Bool
+hasWin (Player color position cards _) 
+    | ((length cards) == 0 && position == (initialPosition' color)) = True
+    | otherwise = False
+
+isAI :: Player -> Bool
+isAI (Player _ _ _ control) = (control == AI)
+
+-- IA PART
+
+findNextPosition :: Player -> [Position] -> [Float] -> (Position, [Float])
+findNextPosition player [] randomList = (position player, randomList)
+findNextPosition player reachablePositions (randomNotRanged:restRandom) 
+    | ((length (cards player)) == 0) && (elem (initialPosition player) reachablePositions) = (initialPosition player, restRandom) -- Winning situation
+    | ((length (cards player)) == 0) = ((findClosest (position player) reachablePositions randomNotRanged), restRandom)
+    | otherwise = (newPosition, restRandom)
+    where 
+        randomIndex = Utils.getInRange randomNotRanged 0 (length reachablePositions)-1
+        newPosition = reachablePositions !! randomIndex
+
+findClosest :: Position -> [Position] -> Float -> Position
+findClosest position reachablePositions randomNotRanged = randomClosestPosition
+    where potentialPositions = findClosest' position reachablePositions 1
+          randomIndex = Utils.getInRange randomNotRanged 0 (length potentialPositions)-1
+          randomClosestPosition = potentialPositions !! randomIndex
+    
+findClosest' :: Position -> [Position] -> Int -> [Position]
+findClosest' (Position x y) reachablePositions level
+    | level > 4 = []
+    | length closestPositions == 0 = findClosest' (Position x y) reachablePositions (level+1)
+    | otherwise = closestPositions
+    where closestPositions = [(Position (x+xMove) (y+yMove)) | xMove <- [(-level)..(level)], yMove <- [(-level)..(level)], (elem (Position (x+xMove) (y+yMove)) reachablePositions)]

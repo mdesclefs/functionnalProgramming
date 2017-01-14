@@ -7,14 +7,38 @@ data Kind = Corner | Tshape | Line deriving (Eq, Enum, Read, Show)
 data Direction = None | North | East | South | West deriving (Eq, Enum, Read, Show)
 
 data Tile = Tile {  direction :: Direction
-                 ,  kinds :: Kind
-                 ,  treasure :: Int}
+                 ,  kind :: Kind
+                 ,  treasure :: Int} | Empty deriving (Eq)
+
+
+save :: Tile -> String
+save (Tile direction kind treasure) = txtTile
+    where txtTile =  (show kind) ++ showTres ++ (show direction)
+          showTres = if treasure > 0 then " " ++ (show treasure) ++ " " else " "
+
+saveExtraTile :: Tile -> String
+saveExtraTile (Tile _ kind treasure) = txtTile
+    where txtTile =  (show kind) ++ showTres
+          showTres = if treasure > 0 then " " ++ (show treasure) ++ " " else " "
+
+saveTiles :: [[Tile]] -> String
+saveTiles tiles = saveMatrix tiles ""
+
+saveMatrix :: [[Tile]] -> String -> String
+saveMatrix [] txtTiles = txtTiles
+saveMatrix (tiles:rest) txtTiles = saveMatrix rest newTxtTiles
+    where newTxtTiles = txtTiles ++ " " ++ saveLine tiles ""
+
+saveLine :: [Tile] -> String -> String
+saveLine [] txtTiles = txtTiles
+saveLine (tile:rest) txtTiles = saveLine rest newTxtTiles
+    where newTxtTiles = txtTiles ++ " " ++ save tile
 
 instance Show Tile where
-    show (Tile direction kinds treasure)
-        | (kinds == Corner) = (showCorner direction) ++ showTreasure
-        | (kinds == Tshape) = (showTshaped direction) ++ showTreasure
-        | (kinds == Line) = (showLine direction) ++ showTreasure
+    show (Tile direction kind treasure)
+        | (kind == Corner) = (showCorner direction) ++ showTreasure
+        | (kind == Tshape) = (showTshaped direction) ++ showTreasure
+        | (kind == Line) = (showLine direction) ++ showTreasure
         | otherwise = show 'X'
         where showTreasure = if treasure > 0 then 
                                 (
@@ -29,7 +53,7 @@ showCorner direction
     | (direction == East) = "╔"
     | (direction == South) = "╗"
     | (direction == West) = "╝"
-    | otherwise = "X"
+    | otherwise = "╚ (North) ╔ (East) ╗ (South) ╝ (West)"
 
 showTshaped :: Direction -> String
 showTshaped direction 
@@ -37,7 +61,7 @@ showTshaped direction
     | (direction == East) = "╠"
     | (direction == South) = "╦"
     | (direction == West) = "╣"
-    | otherwise = "X"
+    | otherwise = "╩ (North) ╠ (East) ╦ (South) ╣ (West)"
 
 showLine :: Direction -> String
 showLine direction 
@@ -45,13 +69,13 @@ showLine direction
     | (direction == East) = "═"
     | (direction == South) = "║"
     | (direction == West) = "═"
-    | otherwise = "X"
+    | otherwise = "║ (North, South) ═ (East, West)"
 
 -- Core functionnality
 
 generateTile :: Kind -> Int -> Tile
-generateTile kinds random = Tile{   direction = direction
-                                ,   kinds = kinds
+generateTile kind random = Tile{   direction = direction
+                                ,   kind = kind
                                 ,   treasure = 0
                                 }
                 where direction = directions!!random
