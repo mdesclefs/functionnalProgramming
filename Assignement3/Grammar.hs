@@ -1,6 +1,5 @@
 module Grammar where 
 
-
 import Data.Char
 
 import Parser
@@ -64,6 +63,7 @@ xtile = do  kind <- kind
             return $ Tile.Tile Tile.None kind treasure 
 
 -- Use many here was to slow to parse the file
+-- Did this manually
 tiles :: Parser [Tile.Tile]
 tiles = do  tile' <- tile `orelse` return Tile.Empty
             tiles' <- if tile' /= Tile.Empty 

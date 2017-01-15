@@ -94,8 +94,8 @@ slidePlayers' axis (player:restPlayers) axisValue players
     | otherwise = slidePlayers' axis restPlayers axisValue newPlayers
     where   newPlayers = players ++ [player']
             playerPosition = position player
-            newX = if (fst axisValue) == 1 then (x playerPosition)+1 else (x playerPosition)-1
-            newY = if (fst axisValue) == 1 then (y playerPosition)+1 else (y playerPosition)-1
+            newX = if (fst axisValue) == 0 then (x playerPosition)+1 else (x playerPosition)-1
+            newY = if (fst axisValue) == 0 then (y playerPosition)+1 else (y playerPosition)-1
             newPosition = 
                 if axis == 1 then 
                     playerPosition { y = newY }
