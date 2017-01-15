@@ -166,7 +166,7 @@ getDirection direction
 
 getNumber :: (Int -> Bool) -> String -> String -> IO Int
 getNumber validator question fail = do
-    putStr question
+    putStrLn question
     (number :: Int) <- readLn
 
     if validator number
